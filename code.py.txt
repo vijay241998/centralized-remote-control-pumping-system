@@ -1,0 +1,149 @@
+const byte  frontButtonPin = 2;     
+const byte  backButtonPin = 4;     
+const byte  onOffButtonPin = 11;     
+const int   motorPin =  8;      
+const int   motorPin2 =  7;      
+
+boolean  frontButtonState = 0;      
+boolean  backButtonState = 0;        
+boolean  onOffButtonState = 0;   
+
+
+
+/**
+    setup inputs for switches and outs for motor pins
+    serial begin to read the switches to test for errors
+*/
+void setup() {
+  // initialize the pin as an inputs:
+  pinMode(motorPin, OUTPUT);
+  pinMode(motorPin2, OUTPUT);
+  // initialize the pushbutton pin as an input:
+  pinMode(frontButtonPin, INPUT);
+  pinMode(backButtonPin, INPUT);
+  pinMode(onOffButtonPin, INPUT);
+  Serial.begin(9600);
+}
+
+/**
+   this function turns motor foward
+*/
+void drawMovesForward() {
+  // turn motor foward:
+  digitalWrite(motorPin, LOW);
+  digitalWrite(motorPin2, HIGH);
+}
+
+/**
+   this function turns motor backwards
+*/
+void drawMovesBackward() {
+  // turn motor in other direction:
+  digitalWrite(motorPin, HIGH);
+  digitalWrite(motorPin2, LOW);
+}
+
+/**
+   Stop the motor form moving
+*/
+void stopDrawFromMoving() {
+  digitalWrite(motorPin, LOW);
+  digitalWrite(motorPin2, LOW);
+
+}
+
+
+/**
+
+*/
+void loop() {
+
+  frontButtonState = digitalRead(frontButtonPin);
+  backButtonState  = digitalRead(backButtonPin);
+  onOffButtonState = digitalRead(onOffButtonPin);
+
+
+
+  if (onOffButtonState == HIGH) {
+    if ( frontButtonState == LOW ) {
+      drawMovesForward();
+
+    }
+
+    else if (backButtonState == LOW ) {
+      drawMovesBackward();
+    }
+
+  }
+  else {
+    if ( frontButtonState == HIGH ) {
+      stopDrawFromMoving();
+    }
+
+    else if (backButtonState == HIGH ) {
+      stopDrawFromMoving();
+    }
+  }
+}
+motor
+shareimprove this question
+edited May 8 '18 at 4:41
+asked May 5 '18 at 6:46
+
+Leeham
+1616
+Welcome to StackExchange. I'm pleased to say you have made an excellent start by formatting your code and giving details in your description of your problem. Your logic looks good to me. To start troubleshooting, I would put println() statements in each of the functions, and try to work out where the program is hanging. When you say the "LEDs turn on and off", what LEDs are you referring to? This is where a schematic might help us troubleshoot, but you have mentioned that the parts are working by themselves. – MechtEngineer May 5 '18 at 11:06 
+Presumably you are currently testing with the parts disconnected (not installed in the drawer?). This makes it a lot easier to identify what is going wrong. – MechtEngineer May 5 '18 at 11:14
+Thanks, I had a professional programmer help me program the Arduino but he has never used Arduino stuff before so he recommended using this website to look for other peoples advice. The LED's are the LED's on the arduino board. they turn on and off again and the arduino boards reset (they turn off and off again) when the back limit switch is hit and i hit the on/off switch at the same time. – Leeham May 7 '18 at 2:45 
+Can you edit your question to mention whether the circuit is using a "toggle" or push-button activation switch? I presume it is a "toggle" switch as otherwise your code would only work by holding down a pushbutton switch. – MechtEngineer May 8 '18 at 6:55
+Yeah there just momentary push buttons, push the button and let go. Also i actually fixed the code and now it works fine. Should i update the original post to say "problem solved" and then insert the code and how i fixed it? or do i do that somewhere else? – Leeham May 8 '18 at 9:58
+show 1 more comment
+2 Answers
+active oldest votes
+
+1
+
+Check your switches have pull-up resistors
+
+It would be helpful if your question included a schematic. Do you have pullup resistors in line with your activation and limit switches? If not, you might find the input is "floating" - that is, it will randomly return either HIGH or LOW. This would possibly cause the motor to go forwards and backwards, but because the loop is possibly occurring hundreds of times per second, you might not see anything moving. You need pull-up or pull-down resistors in the circuit so the Arduino can see a definite LOW or HIGH. See https://www.arduino.cc/en/Tutorial/Button for a tutorial with a resistor, or even better, use https://www.arduino.cc/en/Tutorial/InputPullupSerial and use the existing onboard pullup resistors on the Arduino, as suggested by Juraj below.
+
+Potential Logic Error
+
+There might be a logic error in this part of the code:
+
+  if (onOffButtonState == HIGH) {
+    if ( frontButtonState == LOW ) {
+      drawMovesForward();
+    }
+    else if (backButtonState == LOW ) {
+      drawMovesBackward();
+    }
+  }
+  else {
+    if ( frontButtonState == HIGH ) {
+      stopDrawFromMoving();
+    }
+    else if (backButtonState == HIGH ) {
+      stopDrawFromMoving();
+    }
+  }
+Loop #1: Let's say the onOffButtonState is HIGH (someone has pressed the switch to ON). The drawer is closed, so the front limit switch is depressed, so frontButtonState is HIGH. So the program will execute stopDrawFromMoving, and do nothing. Currently you are saying nothing is happening, so this might be your issue.
+
+What you will probably need to do is use flags and while loops. For example:
+
+At the start of the loop() declare this
+
+drawerMovingOutFlag = 1;
+Then change the loop to contain:
+
+if (onOffButtonState == HIGH) {
+    if ( frontButtonState == HIGH ) {
+        while(drawerMovingOutFlag == 1)
+            drawMovesForward();
+            if ( backButtonState == HIGH ) {
+                drawerMovingOutFlag = 0;
+                stopDrawFromMoving()
+            }
+        }
+    }
+    else ...
